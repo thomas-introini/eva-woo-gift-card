@@ -1,0 +1,46 @@
+# File: .gitignore
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+.idea/
+.vscode/
+nbproject/
+
+# Node / front-end
+node_modules/
+dist/
+build/
+
+# Composer / PHP tools (not used now, but safe to ignore)
+vendor/
+composer.lock
+
+# PHPStorm meta
+.phpstorm.meta.php
+
+# PHPUnit / coverage
+coverage/
+.phpunit.result.cache
+
+# Docker
+.env
+.docker/
+
+# WordPress runtime content (keep plugins/themes tracked)
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/debug.log
+
+wp-content/plugins/akismet/
+wp-content/plugins/woocommerce/
+wp-content/themes/
+wp-content/plugins/hello.php
+
+
