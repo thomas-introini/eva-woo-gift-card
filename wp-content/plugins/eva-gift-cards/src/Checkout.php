@@ -178,6 +178,19 @@ class Checkout
 			return;
 		}
 
+		// Load custom CSS (if any) configured in admin.
+		$custom_css = (string) get_option('eva_gc_custom_css', '');
+		if ($custom_css) {
+			wp_add_inline_style('woocommerce-general', $custom_css);
+		}
+
+		// Resolve admin-configured colors with sane defaults.
+		$style_box_bg      = (string) get_option('eva_gc_box_bg_color', '#f0f8ff');
+		$style_box_border  = (string) get_option('eva_gc_box_border_color', '#0073aa');
+		$style_apply_bg    = (string) get_option('eva_gc_apply_btn_bg_color', '#0073aa');
+		$style_apply_text  = (string) get_option('eva_gc_apply_btn_text_color', '#ffffff');
+		$style_remove      = (string) get_option('eva_gc_remove_btn_color', '#d63638');
+
 		wp_enqueue_script(
 			'eva-gift-cards-block-checkout',
 			plugins_url('assets/block-checkout.js', EVA_GIFT_CARDS_PLUGIN_FILE),
@@ -212,6 +225,16 @@ class Checkout
 					'placeholder' => __('EVA-XXXXXXXXXXXXXXXX', 'eva-gift-cards'),
 					'button'      => __('Applica', 'eva-gift-cards'),
 					'applying'    => __('Applicando...', 'eva-gift-cards'),
+					'remove'      => __('Rimuovi', 'eva-gift-cards'),
+					'removing'    => __('Rimuovendo...', 'eva-gift-cards'),
+					'applied'     => __('Carta regalo applicata:', 'eva-gift-cards'),
+				),
+				'styles'      => array(
+					'boxBg'        => $style_box_bg,
+					'boxBorder'    => $style_box_border,
+					'applyBtnBg'   => $style_apply_bg,
+					'applyBtnText' => $style_apply_text,
+					'removeColor'  => $style_remove,
 				),
 			)
 		);
@@ -563,6 +586,7 @@ class Checkout
 
 		$order->update_meta_data('_eva_gift_card_code', (string) $code);
 		$order->update_meta_data('_eva_gift_card_amount_used', (float) $amount);
+		$order->save();
 
 		// Clear session after storing on order.
 		WC()->session->set(self::SESSION_CODE_KEY, null);
@@ -596,6 +620,7 @@ class Checkout
 
 		$order->update_meta_data('_eva_gift_card_code', (string) $code);
 		$order->update_meta_data('_eva_gift_card_amount_used', (float) $amount);
+		$order->save();
 
 		// Clear after storing.
 		WC()->session->set(self::SESSION_CODE_KEY, null);

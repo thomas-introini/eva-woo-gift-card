@@ -223,10 +223,10 @@ class ProductIntegration {
 			'eva_gift_card_recipient_email',
 			array(
 				'type'        => 'email',
-				'required'    => true,
+				'required'    => false,
 				'class'       => array( 'form-row-wide' ),
-				'label'       => __( 'Email del destinatario', 'eva-gift-cards' ),
-				'placeholder' => __( 'Inserisci l\'email del destinatario', 'eva-gift-cards' ),
+				'label'       => __( 'Email del destinatario (opzionale)', 'eva-gift-cards' ),
+				'placeholder' => __( 'Lascia vuoto per inviare al tuo indirizzo', 'eva-gift-cards' ),
 			),
 			$value
 		);
@@ -252,8 +252,9 @@ class ProductIntegration {
 
 		$email = isset( $_POST['eva_gift_card_recipient_email'] ) ? sanitize_email( wp_unslash( $_POST['eva_gift_card_recipient_email'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
-		if ( empty( $email ) || ! is_email( $email ) ) {
-			wc_add_notice( __( 'Inserisci un\'email del destinatario valida per la carta regalo.', 'eva-gift-cards' ), 'error' );
+		// Email is optional: only validate format if provided.
+		if ( ! empty( $email ) && ! is_email( $email ) ) {
+			wc_add_notice( __( 'Inserisci un\'email del destinatario valida per la carta regalo oppure lascia vuoto.', 'eva-gift-cards' ), 'error' );
 			return false;
 		}
 

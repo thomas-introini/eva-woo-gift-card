@@ -27,12 +27,19 @@ jQuery(document).ready(function($) {
 		}
 
 		const labels = window.evaGiftCardsData.labels;
+		const styles = (window.evaGiftCardsData && window.evaGiftCardsData.styles) ? window.evaGiftCardsData.styles : {
+			boxBg: '#f0f8ff',
+			boxBorder: '#0073aa',
+			applyBtnBg: '#0073aa',
+			applyBtnText: '#ffffff',
+			removeColor: '#d63638',
+		};
 		const currentCode = window.evaGiftCardsData.currentCode || '';
 
 		console.log('Eva Gift Cards: Injecting field with labels', labels);
 
 		const fieldHTML = `
-			<div id="eva-gift-card-field" style="margin: 20px 0; padding: 20px; background: #f0f8ff; border: 2px solid #0073aa; border-radius: 4px;">
+			<div id="eva-gift-card-field" style="margin: 20px 0; padding: 20px; background: ${styles.boxBg}; border: 2px solid ${styles.boxBorder}; border-radius: 4px;">
 				<h3 style="margin-top: 0;">${labels.title}</h3>
 				<p>${labels.description}</p>
 				<div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -47,11 +54,25 @@ jQuery(document).ready(function($) {
 					<button
 						type="button"
 						id="eva_apply_gift_card"
-						style="padding: 10px 20px; background: #0073aa; color: white; border: none; border-radius: 4px; cursor: pointer;"
+						style="padding: 10px 20px; background: ${styles.applyBtnBg}; color: ${styles.applyBtnText}; border: none; border-radius: 4px; cursor: pointer;"
 					>
 						${labels.button}
 					</button>
 				</div>
+				${currentCode ? `
+				<div id="eva-gift-card-applied" style="display: flex; align-items: center; gap: 8px; margin: 8px 0 0;">
+					<span>${labels.applied} <strong>${currentCode}</strong></span>
+					<button
+						type="button"
+						id="eva_remove_gift_card"
+						aria-label="${labels.remove}"
+						title="${labels.remove}"
+						style="padding: 4px 8px; background: transparent; color: ${styles.removeColor}; border: 1px solid ${styles.removeColor}; border-radius: 4px; cursor: pointer; line-height: 1;"
+					>
+						×
+					</button>
+				</div>
+				` : ``}
 				<div id="eva-gift-card-message" style="margin: 0;"></div>
 			</div>
 		`;
@@ -113,6 +134,45 @@ jQuery(document).ready(function($) {
 					console.error('Eva Gift Cards: AJAX error:', status, error, xhr);
 					message.html('<span style="color: red;">Errore durante l\'applicazione del codice</span>');
 					button.prop('disabled', false).text(labels.button);
+				}
+			});
+		});
+
+		// Handle remove button click
+		$(document).on('click', '#eva_remove_gift_card', function(e) {
+			e.preventDefault();
+			console.log('Eva Gift Cards: Remove button clicked');
+
+			const button = $(this);
+			const message = $('#eva-gift-card-message');
+
+			button.prop('disabled', true).text(labels.removing);
+			message.html('');
+
+			$.ajax({
+				url: window.evaGiftCardsData.ajaxUrl,
+				method: 'POST',
+				data: {
+					action: 'eva_apply_gift_card',
+					nonce: window.evaGiftCardsData.nonce,
+					code: ''
+				},
+				success: function(response) {
+					console.log('Eva Gift Cards: Remove response:', response);
+					if (response.success) {
+						// Reload to update cart totals
+						setTimeout(function() {
+							window.location.reload();
+						}, 300);
+					} else {
+						message.html('<span style="color: red;">' + (response?.data?.message || 'Errore durante la rimozione') + '</span>');
+						button.prop('disabled', false).text(labels.remove);
+					}
+				},
+				error: function(xhr, status, error) {
+					console.error('Eva Gift Cards: Remove AJAX error:', status, error, xhr);
+					message.html('<span style="color: red;">Errore durante la rimozione</span>');
+					button.prop('disabled', false).text(labels.remove);
 				}
 			});
 		});

@@ -148,7 +148,7 @@ class ListTable extends \WP_List_Table {
 				return $code_html . $this->row_actions( $actions );
 
 			case 'initial_amount':
-				return esc_html(
+				return wp_kses_post(
 					wc_price(
 						$item['initial_amount'],
 						array(
@@ -158,7 +158,7 @@ class ListTable extends \WP_List_Table {
 				);
 
 			case 'remaining_amount':
-				return esc_html(
+				return wp_kses_post(
 					wc_price(
 						$item['remaining_amount'],
 						array(

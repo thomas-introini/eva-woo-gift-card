@@ -4,10 +4,12 @@
 namespace Eva\GiftCards;
 
 use Eva\GiftCards\Admin\AdminMenu;
+use Eva\GiftCards\Admin\SettingsPage;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
-class Plugin {
+class Plugin
+{
 
 	/**
 	 * Plugin instance.
@@ -70,8 +72,9 @@ class Plugin {
 	 *
 	 * @return Plugin
 	 */
-	public static function instance(): Plugin {
-		if ( null === self::$instance ) {
+	public static function instance(): Plugin
+	{
+		if (null === self::$instance) {
 			self::$instance = new self();
 		}
 
@@ -83,26 +86,26 @@ class Plugin {
 	 *
 	 * @return void
 	 */
-	public function init(): void {
+	public function init(): void
+	{
 		$this->gift_card_repository = new GiftCardRepository();
-		$this->redemption_service   = new RedemptionService( $this->gift_card_repository );
+		$this->redemption_service   = new RedemptionService($this->gift_card_repository);
 		$this->product_integration  = new ProductIntegration();
-		$this->checkout             = new Checkout( $this->redemption_service );
-		$this->order_hooks          = new OrderHooks( $this->gift_card_repository );
+		$this->checkout             = new Checkout($this->redemption_service);
+		$this->order_hooks          = new OrderHooks($this->gift_card_repository);
 
 		$this->product_integration->hooks();
 		$this->checkout->hooks();
 		$this->order_hooks->hooks();
 
 		// Initialize Store API integration for WooCommerce Blocks.
-		$this->store_api_integration = new StoreApiIntegration( $this->redemption_service );
+		$this->store_api_integration = new StoreApiIntegration($this->redemption_service);
 		$this->store_api_integration->init();
 
-		if ( is_admin() ) {
-			$this->admin_menu = new AdminMenu( $this->gift_card_repository );
+		if (is_admin()) {
+			$this->admin_menu = new AdminMenu($this->gift_card_repository);
 			$this->admin_menu->hooks();
+			(new SettingsPage())->hooks();
 		}
 	}
 }
-
-
