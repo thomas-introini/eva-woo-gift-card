@@ -32,6 +32,8 @@ coverage/
 .env
 .docker/
 
+build
+
 # WordPress runtime content (keep plugins/themes tracked)
 wp-content/uploads/
 wp-content/cache/
