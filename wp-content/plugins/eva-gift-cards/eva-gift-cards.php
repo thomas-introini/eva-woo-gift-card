@@ -5,7 +5,7 @@
  * Plugin Name: Eva Gift Cards
  * Plugin URI: https://example.com
  * Description: Gift card store credit system for WooCommerce.
- * Version: 1.2.1
+ * Version: 1.3.0
  * Author: Thomas Introini
  * Text Domain: eva-gift-cards
  * Domain Path: /languages
