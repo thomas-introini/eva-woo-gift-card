@@ -1,5 +1,5 @@
 # File: Dockerfile
-FROM wordpress:php8.1-apache
+FROM wordpress:php8.2-apache
 
 RUN apt-get update && apt-get install -y \
     less \

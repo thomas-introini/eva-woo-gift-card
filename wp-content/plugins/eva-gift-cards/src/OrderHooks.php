@@ -337,6 +337,7 @@ class OrderHooks
 			echo '<th>' . esc_html__('Importo iniziale', 'eva-gift-cards') . '</th>';
 			echo '<th>' . esc_html__('Importo residuo', 'eva-gift-cards') . '</th>';
 			echo '<th>' . esc_html__('Stato', 'eva-gift-cards') . '</th>';
+			echo '<th>' . esc_html__('Data invio', 'eva-gift-cards') . '</th>';
 			echo '<th>' . esc_html__('Email destinatario', 'eva-gift-cards') . '</th>';
 			echo '</tr></thead>';
 			echo '<tbody>';
@@ -376,6 +377,24 @@ class OrderHooks
 						break;
 				}
 				echo '<td>' . esc_html($status_label) . '</td>';
+				// Scheduled send date from order item meta, formatted as dd/mm/yyyy when present.
+				$send_date_display = '-';
+				if (! empty($gift_card['order_item_id'])) {
+					$ymd = (string) wc_get_order_item_meta((int) $gift_card['order_item_id'], '_eva_gift_card_send_date', true);
+					if ('' !== $ymd) {
+						if (preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $ymd)) {
+							try {
+								$dt = new \DateTimeImmutable($ymd);
+								$send_date_display = $dt->format('d/m/Y');
+							} catch (\Exception $e) {
+								$send_date_display = $ymd;
+							}
+						} else {
+							$send_date_display = $ymd;
+						}
+					}
+				}
+				echo '<td>' . esc_html($send_date_display) . '</td>';
 				echo '<td>' . esc_html($gift_card['recipient_email']) . '</td>';
 				echo '</tr>';
 			}

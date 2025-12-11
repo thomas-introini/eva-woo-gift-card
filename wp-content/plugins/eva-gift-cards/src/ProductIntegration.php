@@ -11,9 +11,11 @@ use function esc_html;
 use function get_post_meta;
 use function is_email;
 use function sanitize_email;
+use function sanitize_text_field;
 use function sanitize_textarea_field;
 use function update_post_meta;
 use function wp_kses_post;
+use function wp_timezone;
 use function wp_unslash;
 
 defined('ABSPATH') || exit;
@@ -246,6 +248,29 @@ class ProductIntegration
 	}
 
 	/**
+	 * Format a stored ISO date (YYYY-MM-DD) into dd/mm/yyyy for display.
+	 *
+	 * @param string|null $ymd Date string in Y-m-d format.
+	 * @return string
+	 */
+	private function format_display_date($ymd): string
+	{
+		$ymd = (string) $ymd;
+		if ('' === $ymd) {
+			return '';
+		}
+		if (! preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $ymd)) {
+			return $ymd;
+		}
+		try {
+			$dt = new \DateTimeImmutable($ymd);
+			return $dt->format('d/m/Y');
+		} catch (\Exception $e) {
+			return $ymd;
+		}
+	}
+
+	/**
 	 * Render recipient email field on single product page.
 	 *
 	 * @return void
@@ -264,6 +289,8 @@ class ProductIntegration
 
 		$value = isset($_POST['eva_gift_card_recipient_email']) ? sanitize_email(wp_unslash($_POST['eva_gift_card_recipient_email'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$message_value = isset($_POST['eva_gift_card_message']) ? sanitize_textarea_field(wp_unslash($_POST['eva_gift_card_message'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$scheduled_value = isset($_POST['eva_gift_card_send_date']) ? sanitize_text_field(wp_unslash($_POST['eva_gift_card_send_date'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$today_min = current_time('Y-m-d');
 
 		echo '<div class="eva-gift-card-fields">';
 
@@ -294,6 +321,33 @@ class ProductIntegration
 			$message_value
 		);
 		echo '</div>';
+
+		// Scheduled send date (optional, only relevant when recipient email is provided).
+		echo '<div class="eva-gift-card-send-date">';
+		woocommerce_form_field(
+			'eva_gift_card_send_date',
+			array(
+				'type'              => 'date',
+				'required'          => false,
+				'class'             => array('form-row-first'),
+				'label'             => __('Data invio programmata', 'eva-gift-cards'),
+				'placeholder'       => '',
+				'custom_attributes' => array_filter(
+					array(
+						'min'      => $today_min,
+						'disabled' => empty($value) ? 'disabled' : null,
+					)
+				),
+			),
+			$scheduled_value
+		);
+		echo '</div>';
+
+		// Lightweight, product-scoped script: keeps the date field disabled until a recipient email is set
+		// and enforces min=today in the client (server-side validation remains authoritative).
+		echo '<script>
+document.addEventListener("DOMContentLoaded",function(){var e=document.getElementById("eva_gift_card_recipient_email"),t=document.getElementById("eva_gift_card_send_date");if(!e||!t)return;function n(){var n=(new Date).toISOString().slice(0,10);t.min=n;var a=(e.value||"").trim()==="";t.disabled=a;if(a){t.value=""}}e.addEventListener("input",n);e.addEventListener("change",n);n()});
+</script>';
 		echo '</div>';
 	}
 
@@ -317,6 +371,7 @@ class ProductIntegration
 
 		$email = isset($_POST['eva_gift_card_recipient_email']) ? sanitize_email(wp_unslash($_POST['eva_gift_card_recipient_email'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$message = isset($_POST['eva_gift_card_message']) ? sanitize_textarea_field(wp_unslash($_POST['eva_gift_card_message'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$send_date_raw = isset($_POST['eva_gift_card_send_date']) ? sanitize_text_field(wp_unslash($_POST['eva_gift_card_send_date'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		// Email is optional: only validate format if provided.
 		if (! empty($email) && ! is_email($email)) {
@@ -335,6 +390,28 @@ class ProductIntegration
 		if (! empty($message) && mb_strlen($message) > 1000) {
 			wc_add_notice(__('Il messaggio personalizzato è troppo lungo (max 1000 caratteri).', 'eva-gift-cards'), 'error');
 			return false;
+		}
+
+		// Scheduled date validation: only relevant if recipient email is provided and a date is set.
+		if (! empty($email) && '' !== $send_date_raw) {
+			if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $send_date_raw)) {
+				wc_add_notice(__('La data programmata non è valida.', 'eva-gift-cards'), 'error');
+				return false;
+			}
+
+			try {
+				$tz     = wp_timezone();
+				$chosen = new \DateTimeImmutable($send_date_raw . ' 00:00:00', $tz);
+				$today  = new \DateTimeImmutable('today', $tz);
+			} catch (\Exception $e) {
+				wc_add_notice(__('La data programmata non è valida.', 'eva-gift-cards'), 'error');
+				return false;
+			}
+
+			if ($chosen < $today) {
+				wc_add_notice(__('La data di invio non può essere nel passato.', 'eva-gift-cards'), 'error');
+				return false;
+			}
 		}
 
 		return $passed;
@@ -358,6 +435,7 @@ class ProductIntegration
 
 		$email = isset($_POST['eva_gift_card_recipient_email']) ? sanitize_email(wp_unslash($_POST['eva_gift_card_recipient_email'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$message = isset($_POST['eva_gift_card_message']) ? sanitize_textarea_field(wp_unslash($_POST['eva_gift_card_message'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$send_date_raw = isset($_POST['eva_gift_card_send_date']) ? sanitize_text_field(wp_unslash($_POST['eva_gift_card_send_date'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Missing
 
 		if ($email) {
 			$cart_item_data['eva_gift_card_recipient_email'] = $email;
@@ -365,6 +443,11 @@ class ProductIntegration
 
 		if ('' !== $message) {
 			$cart_item_data['eva_gift_card_message'] = $message;
+		}
+
+		// Only store the scheduled date if an email is set and date is non-empty and valid format.
+		if (! empty($email) && '' !== $send_date_raw && preg_match('/^\d{4}-\d{2}-\d{2}$/', $send_date_raw)) {
+			$cart_item_data['eva_gift_card_send_date'] = $send_date_raw;
 		}
 
 		return $cart_item_data;
@@ -393,6 +476,14 @@ class ProductIntegration
 			$item->add_meta_data(
 				'_eva_gift_card_message',
 				sanitize_textarea_field($values['eva_gift_card_message']),
+				true
+			);
+		}
+
+		if (isset($values['eva_gift_card_send_date'])) {
+			$item->add_meta_data(
+				'_eva_gift_card_send_date',
+				sanitize_text_field($values['eva_gift_card_send_date']),
 				true
 			);
 		}
@@ -434,6 +525,14 @@ class ProductIntegration
 			);
 		}
 
+		$send_date = isset($cart_item['eva_gift_card_send_date']) ? sanitize_text_field($cart_item['eva_gift_card_send_date']) : '';
+		if ('' !== $send_date) {
+			$item_data[] = array(
+				'name'  => __('Data invio', 'eva-gift-cards'),
+				'value' => esc_html($this->format_display_date($send_date)),
+			);
+		}
+
 		return $item_data;
 	}
 
@@ -460,8 +559,9 @@ class ProductIntegration
 
 		$email   = $item->get_meta('_eva_gift_card_recipient_email', true);
 		$message = $item->get_meta('_eva_gift_card_message', true);
+		$send_date = $item->get_meta('_eva_gift_card_send_date', true);
 
-		if (empty($email) && '' === (string) $message) {
+		if (empty($email) && '' === (string) $message && '' === (string) $send_date) {
 			return;
 		}
 
@@ -472,6 +572,9 @@ class ProductIntegration
 			if ('' !== (string) $message) {
 				echo sprintf("%s: %s\n", __('Messaggio', 'eva-gift-cards'), $message); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
+			if ('' !== (string) $send_date) {
+				echo sprintf("%s: %s\n", __('Data invio', 'eva-gift-cards'), $this->format_display_date($send_date)); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
 			return;
 		}
 
@@ -481,6 +584,9 @@ class ProductIntegration
 		}
 		if ('' !== (string) $message) {
 			echo '<p><strong>' . esc_html(__('Messaggio', 'eva-gift-cards')) . ':</strong><br />' . wp_kses_post(nl2br(esc_html($message))) . '</p>';
+		}
+		if ('' !== (string) $send_date) {
+			echo '<p><strong>' . esc_html(__('Data invio', 'eva-gift-cards')) . ':</strong> ' . esc_html($this->format_display_date($send_date)) . '</p>';
 		}
 		echo '</div>';
 	}

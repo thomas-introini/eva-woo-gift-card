@@ -3,9 +3,10 @@
 
 namespace Eva\GiftCards;
 
-defined( 'ABSPATH' ) || exit;
+defined('ABSPATH') || exit;
 
-class Activation {
+class Activation
+{
 
 	const DB_VERSION_OPTION = 'eva_gift_cards_db_version';
 	const DB_VERSION        = '1.0.0';
@@ -15,9 +16,10 @@ class Activation {
 	 *
 	 * @return void
 	 */
-	public static function activate(): void {
+	public static function activate(): void
+	{
 		self::create_or_update_table();
-		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+		update_option(self::DB_VERSION_OPTION, self::DB_VERSION);
 	}
 
 	/**
@@ -25,7 +27,8 @@ class Activation {
 	 *
 	 * @return void
 	 */
-	private static function create_or_update_table(): void {
+	private static function create_or_update_table(): void
+	{
 		global $wpdb;
 
 		$table_name      = $wpdb->prefix . 'eva_giftcards';
@@ -54,8 +57,6 @@ class Activation {
 			KEY status (status)
 		) {$charset_collate};";
 
-		dbDelta( $sql );
+		dbDelta($sql);
 	}
 }
-
-
